@@ -1,35 +1,43 @@
-# DevOps Nginx Reverse Proxy
+# DevOps CI/CD Pipeline
 
-Учебный проект, демонстрирующий публикацию контейнеризированного веб-приложения через Nginx reverse proxy с использованием Docker Compose и PostgreSQL.
+Учебный проект, демонстрирующий настройку CI pipeline для контейнеризированного приложения с использованием GitHub Actions, Docker Compose, Nginx и PostgreSQL.
 
 ## Описание
 
-Проект состоит из трех сервисов:
+Проект показывает, как автоматизировать проверку приложения и инфраструктурного окружения при каждом push и pull request.
 
-* nginx — принимает входящие HTTP-запросы
-* app — Flask-приложение
-* db — PostgreSQL база данных
+Pipeline выполняет следующие шаги:
 
-Пользователь взаимодействует только с Nginx. Приложение и база данных доступны только внутри docker-сети.
+- получает код из репозитория
+- создает файл переменных окружения
+- валидирует docker compose конфигурацию
+- собирает контейнеры
+- запускает окружение
+- проверяет доступность приложения через endpoint /health
+- завершает работу и удаляет окружение
 
-## Архитектура
+## Архитектура приложения
 
-```
+```text
 Client -> Nginx -> Flask App -> PostgreSQL
 ```
 
 ## Стек технологий
 
-* Nginx
-* Python (Flask)
-* PostgreSQL
-* Docker
-* Docker Compose
+- GitHub Actions
+- Docker
+- Docker Compose
+- Nginx
+- Python Flask
+- PostgreSQL
 
 ## Структура проекта
 
-```
+```text
 .
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── app/
 │   ├── app.py
 │   ├── requirements.txt
@@ -40,170 +48,124 @@ Client -> Nginx -> Flask App -> PostgreSQL
 │   └── default.conf
 ├── docker-compose.yml
 ├── .env.example
+├── .gitignore
 └── README.md
 ```
 
-## Переменные окружения
+## Локальный запуск
 
-Создайте файл `.env` на основе шаблона:
+Создать файл переменных окружения:
 
-```
+```bash
 cp .env.example .env
 ```
 
-Пример содержимого:
+Запустить проект:
 
-```
-DB_HOST=db
-DB_PORT=5432
-DB_NAME=appdb
-DB_USER=appuser
-DB_PASSWORD=apppassword
-
-POSTGRES_DB=appdb
-POSTGRES_USER=appuser
-POSTGRES_PASSWORD=apppassword
-```
-
-## Запуск проекта
-
-Собрать и запустить:
-
-```
+```bash
 docker compose up --build
 ```
 
-Приложение будет доступно по адресу:
+Проверить работу приложения:
 
-```
-http://localhost:8080
-```
-
-## Проверка работы
-
-Главная страница:
-
-```
+```bash
 curl http://localhost:8080/
-```
-
-Проверка состояния:
-
-```
 curl http://localhost:8080/health
-```
-
-Получение данных:
-
-```
 curl http://localhost:8080/users
 ```
 
-## Остановка
+Остановить проект:
 
-```
+```bash
 docker compose down
 ```
 
-## Полная очистка
+Удалить контейнеры и volume:
 
-Удаляет контейнеры и данные базы:
-
-```
+```bash
 docker compose down -v
 ```
+
+## CI pipeline
+
+Workflow расположен в файле:
+
+```text
+.github/workflows/ci.yml
+```
+
+Pipeline запускается при:
+
+- push в ветку main
+- pull request в ветку main
+
+## Что проверяет pipeline
+
+- корректность docker compose конфигурации
+- успешную сборку контейнеров
+- успешный запуск сервисов
+- доступность приложения по endpoint /health
+
+## Как посмотреть результат
+
+В GitHub:
+- открыть вкладку Actions
+- выбрать workflow CI Pipeline
+- открыть последний запуск
 
 ## Полезные команды
 
-Список контейнеров:
+Проверка compose-конфигурации:
 
+```bash
+docker compose config
 ```
+
+Сборка сервисов:
+
+```bash
+docker compose build
+```
+
+Запуск окружения:
+
+```bash
+docker compose up -d
+```
+
+Просмотр контейнеров:
+
+```bash
 docker ps
 ```
 
-Логи всех сервисов:
+Просмотр логов:
 
-```
+```bash
 docker compose logs -f
 ```
 
-Логи приложения:
+Остановка и очистка:
 
-```
-docker compose logs -f app
-```
-
-Логи nginx:
-
-```
-docker compose logs -f nginx
-```
-
-Логи базы данных:
-
-```
-docker compose logs -f db
-```
-
-Пересборка:
-
-```
-docker compose down
-docker compose up --build
-```
-
-## Особенности реализации
-
-* наружу опубликован только nginx
-* backend-сервис не имеет прямого доступа извне
-* база данных не доступна извне
-* взаимодействие сервисов происходит через docker-сеть
-* nginx проксирует запросы на app
-* запуск сервисов зависит от healthcheck
-
-## Healthcheck
-
-* PostgreSQL проверяется через pg_isready
-* приложение проверяется через HTTP endpoint /health
-
-## Возможные проблемы
-
-Порт занят:
-
-```
-sudo lsof -i :8080
-```
-
-Смена порта:
-
-```
-ports:
-  - "8081:80"
-```
-
-Проблемы с базой:
-
-```
+```bash
 docker compose down -v
-```
-
-Проверка состояния контейнера:
-
-```
-docker inspect flask_app --format='{{json .State.Health}}'
 ```
 
 ## Что демонстрирует проект
 
-* настройку reverse proxy
-* изоляцию сервисов
-* работу с docker-compose
-* взаимодействие контейнеров
-* использование переменных окружения
-* базовую организацию инфраструктуры
+- настройку CI через GitHub Actions
+- автоматическую сборку контейнеризированного приложения
+- автоматическую проверку доступности сервиса
+- работу с инфраструктурным стеком в CI
+
+## Возможные улучшения
+
+- добавить публикацию Docker image в registry
+- добавить этапы lint и unit tests
+- добавить CD и деплой на удаленный сервер
+- добавить уведомления о статусе pipeline
 
 ## Автор
 
-Ильшат Нуриев
+Ильшат Нуриев  
 https://github.com/IlshatNuriev
-# devops-cicd-pipeline
